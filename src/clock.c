@@ -16,6 +16,11 @@
 #define RCC_APB2ENR_ADDR	(AHB1_RCC_BASE + RCC_APB2ENR_OFFSET)
 #define RCC_APB2ENR_TIM1EN	1
 
+#define FLASHBASE 0x40023C00UL
+#define FLASH_ACR_ICEN (1UL << 9)
+#define FLASH_ACR_PRFTEN (1UL << 8)
+#define FLASH_ACR_LATENCY_5 5
+#define FLASH_ACR *((volatile uint32_t *const)(FLASHBASE))
 
 void clock_init(void)
 {
@@ -28,6 +33,8 @@ void clock_init(void)
 
 	*RCC_CR |= 1U << 18 | 1U << 16;
 	*RCC_CFGR |= 1U;
+
+	FLASH_ACR |= FLASH_ACR_ICEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY_5;
 
 	/* Enable AHB1 */
 	*RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMA2EN;
