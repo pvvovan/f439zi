@@ -19,7 +19,6 @@
 #define RCC_APB2ENR_TIM1EN	1
 
 #define FLASHBASE 0x40023C00UL
-#define FLASH_ACR_DCEN (1UL << 10)
 #define FLASH_ACR_ICEN (1UL << 9)
 #define FLASH_ACR_PRFTEN (1UL << 8)
 #define FLASH_ACR_LATENCY_5 5
@@ -37,6 +36,7 @@
 
 void clock_init(void)
 {
+	volatile uint32_t tmpreg = 0;
 	volatile uint32_t *const RCC_CR = (volatile uint32_t *const)(RCC_CR_ADDR);
 	volatile uint32_t *const RCC_CFGR = (volatile uint32_t *const)(RCC_CFGR_ADDR);
 	volatile uint32_t *const RCC_AHB1ENR = (volatile uint32_t *const)(RCC_AHB1ENR_ADDR);
@@ -45,27 +45,24 @@ void clock_init(void)
 	const uint32_t RCC_AHB1ENR_DMA1EN = 1UL << 21;
 	const uint32_t RCC_AHB1ENR_DMA2EN = 1UL << 22;
 
-	FLASH_ACR |= FLASH_ACR_DCEN | FLASH_ACR_ICEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY_5;
-
-	*RCC_APB2ENR |= 1UL << 14; // System configuration controller clock enable
-	__sync_synchronize();
-	volatile uint32_t tmpreg = *RCC_APB2ENR;
+	FLASH_ACR |= FLASH_ACR_ICEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY_5;
 
 	*RCC_APB1ENR |= 1UL << 28; // Power interface clock enable
 	__sync_synchronize();
 	tmpreg = *RCC_APB1ENR;
 
-	*RCC_CR |= 1UL << 16; // HSE oscillator ON
+	// HSE oscillator ON, HSE oscillator bypassed with an external clock
+	*RCC_CR |= (1UL << 16) | (1UL << 18);
 	while ((*RCC_CR & (1UL << 17)) == 0) { } // HSE oscillator ready
 
 	*RCC_CFGR |= RCC_CFGR_PPRE1_4 | RCC_CFGR_PPRE2_2;
 
-	RCC_PLLCFGR &= ~0xF0000000uL;
+	RCC_PLLCFGR &= ~0xF0000000uL; // Clear PLLQ bits
 	RCC_PLLCFGR |= RCC_PLLCFGR_PLLQ_7;
 	RCC_PLLCFGR |= RCC_PLLCFGR_PLLSRC_HSE;
-	RCC_PLLCFGR &= ~0x7FC0uL;
+	RCC_PLLCFGR &= ~0x7FC0uL; // Clear PLLN bits
 	RCC_PLLCFGR |= RCC_PLLCFGR_PLLN_168;
-	RCC_PLLCFGR &= ~0x3FuL;
+	RCC_PLLCFGR &= ~0x3FuL; // Clear PLLM bits
 	RCC_PLLCFGR |= RCC_PLLCFGR_PLLM_4;
 	__sync_synchronize();
 	
